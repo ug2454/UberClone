@@ -8,6 +8,9 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
@@ -20,6 +23,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.parse.ParseGeoPoint;
 import com.parse.ParseObject;
 import com.parse.ParseQuery;
+import com.parse.ParseUser;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -31,6 +35,7 @@ public class RequestListActivity extends AppCompatActivity {
     LocationManager locationManager;
     LocationListener locationListener;
     static ArrayList<ParseGeoPoint> locations = new ArrayList<>();
+    ArrayList<String> usernames = new ArrayList<>();
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -44,6 +49,28 @@ public class RequestListActivity extends AppCompatActivity {
             }
         }
     }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu, menu);
+        return true;
+
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        if (item.getItemId() == R.id.logOut) {
+            ParseUser.logOut();
+            Intent in = new Intent(this, MainActivity.class);
+            finish();
+            startActivity(in);
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,6 +129,7 @@ public class RequestListActivity extends AppCompatActivity {
         ParseGeoPoint parseGeoPoint = new ParseGeoPoint(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
         ParseQuery<ParseObject> query = new ParseQuery<>("Request");
         query.whereNear("location", parseGeoPoint);
+        query.whereDoesNotExist("driverUsername");
         query.setLimit(10);
         query.findInBackground((objects, e) -> {
 
@@ -119,6 +147,7 @@ public class RequestListActivity extends AppCompatActivity {
                         String distanceString = decimalFormat.format(distance);
 
                         requestList.add(distanceString + " m");
+                        usernames.add(object.getString("username"));
                         locations.add(object.getParseGeoPoint("location"));
 
                     }
@@ -134,7 +163,10 @@ public class RequestListActivity extends AppCompatActivity {
         requestListView.setOnItemClickListener((adapterView, view, i, l) -> {
             Intent in = new Intent(this, DriverLocationActivity.class);
             in.putExtra("placeLocation", i);
-            finish();
+            in.putExtra("username", usernames.get(i));
+            in.putExtra("currentLocationLat",lastKnownLocation.getLatitude());
+            in.putExtra("currentLocationLon",lastKnownLocation.getLongitude());
+
             startActivity(in);
         });
 

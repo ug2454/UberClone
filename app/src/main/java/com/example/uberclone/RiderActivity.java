@@ -39,12 +39,12 @@ public class RiderActivity extends FragmentActivity implements OnMapReadyCallbac
     LocationListener locationListener;
 
 
-//    @Override
-//    protected void onPause() {
-//        super.onPause();
-//        locationManager.removeUpdates(locationListener);
-//
-//    }
+    @Override
+    protected void onPause() {
+        super.onPause();
+        locationManager.removeUpdates(locationListener);
+
+    }
 
     public void logOut(View view) {
         ParseUser.logOut();

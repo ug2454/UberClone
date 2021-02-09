@@ -1,10 +1,5 @@
 package com.example.uberclone;
 
-import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.fragment.app.FragmentActivity;
-
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
@@ -12,23 +7,71 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
 
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentActivity;
+
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.parse.ParseObject;
+import com.parse.ParseQuery;
+import com.parse.ParseUser;
+
+import java.util.ArrayList;
 
 public class DriverLocationActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     LocationManager locationManager;
     LocationListener locationListener;
+    ArrayList<Marker> markers = new ArrayList<>();
+
+    Intent intent;
+
+    public void acceptRequest(View view) {
+        intent = getIntent();
+        ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
+        query.whereEqualTo("username", intent.getStringExtra("username"));
+        query.findInBackground((objects, e) -> {
+            if (e == null) {
+                if (objects.size() > 0) {
+                    for (ParseObject object : objects) {
+                        object.put("driverUsername", ParseUser.getCurrentUser().getUsername());
+                        object.saveInBackground(e1 -> {
+                            if (e == null) {
+                                System.out.println("driver username saved");
+
+                                Uri gmmIntentUri = Uri.parse("https://maps.google.com/maps?saddr=" +
+                                        RequestListActivity.locations.get(intent.getIntExtra("placeLocation", 0)).getLatitude() + ","
+                                        + RequestListActivity.locations.get(intent.getIntExtra("placeLocation", 0)).getLatitude() + "&saddr="
+                                        + intent.getDoubleExtra("currentLocationLat",0) + "," + intent.getDoubleExtra("currentLocationLon",0));
+                                Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
+//                                mapIntent.setPackage("com.google.android.apps.maps");
+                                startActivity(mapIntent);
+                            } else {
+                                System.out.println(e.getMessage());
+                            }
+                        });
+                    }
+                }
+            }
+        });
 
 
+    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -45,20 +88,30 @@ public class DriverLocationActivity extends FragmentActivity implements OnMapRea
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_driver_location);
+        markers.clear();
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
     }
+
     public void centerMapOnLocation(Location location) {
-        System.out.println("LOCATION"+location);
+        System.out.println("LOCATION" + location);
         LatLng userLocation = new LatLng(location.getLatitude(), location.getLongitude());
 
-        mMap.addMarker(new MarkerOptions().position(userLocation).title("Users Location"));
+        markers.add(mMap.addMarker(new MarkerOptions().position(userLocation).title("Users Location")));
 
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        locationManager.removeUpdates(locationListener);
 
     }
 
@@ -71,31 +124,29 @@ public class DriverLocationActivity extends FragmentActivity implements OnMapRea
      * it inside the SupportMapFragment. This method will only be triggered once the user has
      * installed Google Play services and returned to the app.
      */
+
+
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        Intent intent = getIntent();
+        intent = getIntent();
 
-
-
+//        mMap.setOnMarkerClickListener(marker -> {
+//            marker.setIcon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+//            return true;
+//        });
         Location placeLocation = new Location(LocationManager.NETWORK_PROVIDER);
-        System.out.println("IN ELSE LOCATION"+RequestListActivity.locations.toString());
-        System.out.println(RequestListActivity.locations.toString());
-        System.out.println("PLACE LOCATION"+intent.getIntExtra("placeLocation",0));
-        placeLocation.setLatitude(RequestListActivity.locations.get(intent.getIntExtra("placeLocation",0)).getLatitude());
-        placeLocation.setLongitude(RequestListActivity.locations.get(intent.getIntExtra("placeLocation",0)).getLongitude());
-        System.out.println("IN ELSE LOCATION"+RequestListActivity.locations.get(intent.getIntExtra("placeLocation",0)).getLatitude()+RequestListActivity.locations.get(intent.getIntExtra("placeLocation",0)).getLongitude());
-        System.out.println("PLACE LOCATION"+placeLocation);
+
+        placeLocation.setLatitude(RequestListActivity.locations.get(intent.getIntExtra("placeLocation", 0)).getLatitude());
+        placeLocation.setLongitude(RequestListActivity.locations.get(intent.getIntExtra("placeLocation", 0)).getLongitude());
         centerMapOnLocation(placeLocation);
-        LatLng newloc=new LatLng(RequestListActivity.locations.get(intent.getIntExtra("placeLocation",0)).getLatitude(),RequestListActivity.locations.get(intent.getIntExtra("placeLocation",0)).getLongitude());
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newloc,14));
 
 
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(@NonNull Location location) {
-                centerMapOnLocation(location);
+//                centerMapOnLocation(location);
 
 
             }
@@ -123,17 +174,26 @@ public class DriverLocationActivity extends FragmentActivity implements OnMapRea
 
 
             if (lastKnownLocation != null) {
-                centerMapOnLocation(lastKnownLocation);
+
                 LatLng lastKnown = new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
-                mMap.addMarker(new MarkerOptions().position(lastKnown).title("Users Location").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
-//                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastKnown, 16));
+                markers.add(mMap.addMarker(new MarkerOptions().position(lastKnown).title("Your Current Location").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))));
 
             }
 
 
         }
-
+        System.out.println(markers.size());
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+        for (Marker marker : markers) {
+            builder.include(marker.getPosition());
+        }
+        LatLngBounds bounds = builder.build();
+        int padding = 100; // offset from edges of the map in pixels
+        CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, padding);
+        googleMap.moveCamera(cu);
 
 
     }
+
+
 }
