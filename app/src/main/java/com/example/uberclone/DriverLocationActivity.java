@@ -51,18 +51,20 @@ public class DriverLocationActivity extends FragmentActivity implements OnMapRea
                     for (ParseObject object : objects) {
                         object.put("driverUsername", ParseUser.getCurrentUser().getUsername());
                         object.saveInBackground(e1 -> {
-                            if (e == null) {
+                            if (e1 == null) {
                                 System.out.println("driver username saved");
 
-                                Uri gmmIntentUri = Uri.parse("https://maps.google.com/maps?saddr=" +
-                                        RequestListActivity.locations.get(intent.getIntExtra("placeLocation", 0)).getLatitude() + ","
-                                        + RequestListActivity.locations.get(intent.getIntExtra("placeLocation", 0)).getLatitude() + "&saddr="
-                                        + intent.getDoubleExtra("currentLocationLat",0) + "," + intent.getDoubleExtra("currentLocationLon",0));
+//                                Uri gmmIntentUri = Uri.parse("https://maps.google.com/maps?saddr=" +
+//                                        RequestListActivity.locations.get(intent.getIntExtra("placeLocation", 0)).getLatitude() + ","
+//                                        + RequestListActivity.locations.get(intent.getIntExtra("placeLocation", 0)).getLatitude() + "&saddr="
+//                                        + intent.getDoubleExtra("currentLocationLat",0) + "," + intent.getDoubleExtra("currentLocationLon",0));
+                                Uri gmmIntentUri = Uri.parse("google.navigation:q="+RequestListActivity.locations.get(intent.getIntExtra("placeLocation", 0)).getLatitude()+","+RequestListActivity.locations.get(intent.getIntExtra("placeLocation", 0)).getLongitude());
+
                                 Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
-//                                mapIntent.setPackage("com.google.android.apps.maps");
+                                mapIntent.setPackage("com.google.android.apps.maps");
                                 startActivity(mapIntent);
                             } else {
-                                System.out.println(e.getMessage());
+                                System.out.println(e1.getMessage());
                             }
                         });
                     }

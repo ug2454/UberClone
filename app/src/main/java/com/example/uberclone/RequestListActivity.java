@@ -83,7 +83,15 @@ public class RequestListActivity extends AppCompatActivity {
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(@NonNull Location location) {
-
+                ParseUser.getCurrentUser().put("location",new ParseGeoPoint(location.getLatitude(),location.getLongitude()));
+                ParseUser.getCurrentUser().saveInBackground(e -> {
+                    if(e==null){
+                        System.out.println("data saved");
+                    }
+                    else{
+                        System.out.println(e.getMessage());
+                    }
+                });
 
             }
 
